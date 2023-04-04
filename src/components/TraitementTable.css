@@ -1,0 +1,42 @@
+
+.box {
+width: 200px;
+margin-left: 85%;
+}
+  .box select:hover{
+    cursor: pointer;
+  }
+  .box select {
+    background-color: #08dbba;
+    color: white;
+    width: 200px;
+    border: none;
+    font-size: 16px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    -webkit-appearance: button;
+    appearance: button;
+    outline: none;
+  }
+  
+  .box::before {
+    content: "\f13a";
+    font-family: FontAwesome;
+   
+    width: 20%;
+    text-align: center;
+    font-size: 15px;
+    line-height: 45px;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+  }
+
+  
+  .box select option {
+    padding: 30px;
+    font-size: 15px;
+  }
+  .box select option:hover {
+    background-color: #08dbba;
+    color:white
+  }
