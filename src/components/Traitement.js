@@ -33,219 +33,208 @@ const style = {
 
 export default function Traitement({ jsonData }) {
   const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [selectedTable, setSelectedTable] = React.useState("");
+  const [selectedColumns, setSelectedColumns] = React.useState([]);
+  const [selectedFilters, setSelectedFilters] = React.useState([]);
+  const [operators, setOperators] = React.useState([]);
+  const [selectedOperator, setSelectedOperator] = React.useState("");
 
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [selectedColumns, setSelectedColumns] = useState(null);
-  const [selectedColumn, setSelectedColumn] = useState(null);
-  const [valueValue, setValueValue] = useState("");
-  const [value, setValue] = useState("");
-  const [columnValue, setColumnValue] = useState("");
-  const [operatorValue, setOperatorValue] = useState("");
-  const [filterList, setFilterList] = useState([]);
-  const [operatorOptions, setOperatorOptions] = useState([
-    { value: "=", label: "=" },
-    { value: "!=", label: "!=" },
-    { value: "LIKE", label: "LIKE" },
-    { value: "NOT LIKE", label: "NOT LIKE" },
-  ]);
-
-  const [selectedOperator, setSelectedOperator] = useState(null);
-  
- 
-    useEffect(() => {
-      // Déterminez le type de la colonne sélectionnée
-      const selectedColumnType = selectedColumn
-        ? jsonData[selectedTable].find(
-            (column) => column[0] === selectedColumn
-          )[1]
-        : null;
-      console.log('selectedColumnType:', selectedColumnType);
-      
-      // Afficher les opérateurs de filtrage appropriés pour ce type de colonne
-      if (selectedColumnType === "VARCHAR2") {
-        setOperatorOptions([
-          { value: "=", label: "=" },
-          { value: "!=", label: "!=" },
-          { value: "LIKE", label: "LIKE" },
-          { value: "NOT LIKE", label: "NOT LIKE" },
-        ]);
-      } else if (selectedColumnType === "NUMBER") {
-        setOperatorOptions([
-          { value: "=", label: "=" },
-          { value: "!=", label: "!=" },
-          { value: "<", label: "<" },
-          { value: "<=", label: "<=" },
-          { value: ">", label: ">" },
-          { value: ">=", label: ">=" },
-        ]);
-      } else if (selectedColumnType === "DATE") {
-        setOperatorOptions([
-          { value: "=", label: "=" },
-          { value: "!=", label: "!=" },
-          { value: "<", label: "<" },
-          { value: "<=", label: "<=" },
-          { value: ">", label: ">" },
-          { value: ">=", label: ">=" },
-          { value: "BETWEEN", label: "BETWEEN" },
-        ]);
-      }
-    }, [selectedColumn]);
-    
-    
-    const handleOperatorSelect = (event) => {
-      console.log('selectedOperator:', event.target.value);
-      setSelectedOperator(event.target.value);
-    };
-  const handleClearClick = (index) => {
-    const newFilterList = [...filterList];
-    newFilterList.splice(index, 1);
-    setFilterList(newFilterList);
+  // Function to get the column types for the selected table
+  const getColumnTypes = (tableName) => {
+    const tableColumns = jsonData[tableName];
+    const columnTypes = {};
+    tableColumns.forEach((column) => {
+      columnTypes[column[0]] = column[1];
+    });
+    return columnTypes;
   };
 
-  const handleChange = (event, setState) => {
-    setState(event.target.value);
+  // Function to update operators based on the selected column
+  const updateOperators = (selectedColumn) => {
+    const columnTypes = getColumnTypes(selectedTable);
+    const columnType = columnTypes[selectedColumn];
+    let newOperators = [];
+
+    switch (columnType) {
+      case "VARCHAR2":
+        newOperators = ["=", "<>", "LIKE", "NOT LIKE"];
+        break;
+      case "NUMBER":
+        newOperators = ["=", "<>", ">", ">=", "<", "<=", "BETWEEN", "NOT BETWEEN"];
+        break;
+      case "DATE":
+        newOperators = ["=", "<>", ">", ">=", "<", "<=", "BETWEEN", "NOT BETWEEN"];
+        break;
+      default:
+        newOperators = ["=", "<>"];
+    }
+
+    setOperators(newOperators);
+    setSelectedOperator(newOperators[0]);
   };
 
-  const keys = Object.keys(jsonData);
-
-
-  const handleAddClick = () => {
-    const newFilter = (
-      <Box sx={{ flexGrow: 1, marginTop: 1 }}>
-         <Grid container spacing={1}>
-          <Grid item xs={4}>          
-        {/*pour les colonnes(à filtrer) de la table choisis */}
-          <Autocomplete
-                id="selected-column-select"
-                options={jsonData[selectedTable].map((column) => column[0])}
-                getOptionLabel={(option) => option}
-                sx={{ width: '100%', marginTop: 5, marginBottom: 4 }}
-                renderInput={(params) => (
-                  <TextField {...params} label="Selected columns" />
-                )}
-                onChange={(e)=>{
-                   
-                  
-                  setSelectedColumn(e.target.innerText);
-                  
-                }}
-              />
-            </Grid>
-        {/* pour la liste des opérateurs */}
-        <Grid item xs={4}>
-          
-                <FormControl sx={{ marginTop: 5, marginBottom: 4 }}>
-                  <InputLabel id="operator-select-label">Operator</InputLabel>
-                  <Select
-                    labelId="operator-select-label"
-                    id="operator-select"
-                    value={selectedOperator || ''}
-                    onChange={handleOperatorSelect}
-                  >
-                    {operatorOptions.map(({value , label})=>{
-                      <MenuItem key={value} value={label} >
-                      {label}
-                      </MenuItem>
-                    })}
-                  </Select>
-                </FormControl>
-            </Grid>
-
-          
-          <Grid item xs={4}>
-            <FormControl style={{width:'90px', alignItems:'center'}} variant="standard">
-              <TextField id="standard-basic" label="Value" variant="standard" />
-            </FormControl>
-            </Grid>
-          <Grid>
-            <IconButton onClick={() => handleClearClick(filterList.length)}>
-              <CloseIcon />
-            </IconButton>
-          </Grid>
-          </Grid>
-          
-          </Box>
-    );
-
-    setFilterList([...filterList, newFilter]);
-    setColumnValue("");
-    setOperatorValue("");
-    setValueValue("");
-  };
-
-  const handleTableSelect = (event, value) => {
-    setSelectedTable(value);
+  // Function to handle changes in the table select dropdown
+  const handleTableChange = (event) => {
+    const newTable = event.target.value;
+    setSelectedTable(newTable);
     setSelectedColumns([]);
+    setSelectedFilters([]);
   };
 
-  const handleColumnSelect = (event, value) => {
-    setSelectedColumns(value);
+  // Function to handle changes in the column select dropdown
+  const handleColumnChange = (event) => {
+    const newColumns = event.target.value;
+    setSelectedColumns(newColumns);
+    setSelectedFilters([]);
+    setSelectedOperator("");
+    updateOperators(newColumns[0]);
   };
 
+  // Function to handle changes in the operator select dropdown
+  const handleOperatorChange = (event) => {
+    setSelectedOperator(event.target.value);
+  };
 
+  // Function to handle changes in the filter textfield
+  const handleFilterChange = (event, index) => {
+    const newFilters = [...selectedFilters];
+    newFilters[index] = event.target.value;
+    setSelectedFilters(newFilters);
+  };
+
+  // Function to add a new filter
+  const addFilter = () => {
+    setSelectedFilters([...selectedFilters, ""]);
+  };
+
+  // Function to remove a filter
+  const removeFilter = (index) => {
+    const newFilters = [...selectedFilters];
+    newFilters.splice(index, 1);
+    setSelectedFilters(newFilters);
+  };
+ // Function to handle submitting the form
+const handleSubmit = () => {
+  console.log("Selected Table: ", selectedTable);
+  console.log("Selected Columns: ", selectedColumns);
+  console.log("Selected Filters: ", selectedFilters);
+  console.log("Selected Operator: ", selectedOperator);
+  setOpen(false);
+  };
+  
   return (
-    <div>
-      <Button onClick={handleOpen} style={{ left: "90%" }}>
-        Add Table
-      </Button>
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <IconButton onClick={handleClose} style={{ left: "90%" }}>
-            <CloseIcon />
-          </IconButton>
+  <>
+  <Button variant="contained" onClick={() => setOpen(true)}>
+  Open Modal
+  </Button>
+  
 
-          <Form.Label className="labelName" htmlFor="basic-url">
-            Customize your table
-          </Form.Label>
-          <Autocomplete
-            onChange={handleTableSelect}
-            options={keys}
-            id="combo-box-demo"
-            sx={{ width: 300, marginTop: 5, marginBottom: 4 }}
-            renderInput={(params) => (
-              <TextField {...params} label="Select a table" />
-            )}
-            value={selectedTable}
-          />
-
-
-          {selectedTable && (
-            <Autocomplete
-              multiple
-              id="column-select"
-              options={jsonData[selectedTable].map((column) => column[0])}
-              getOptionLabel={(option) => option}
-              renderInput={(params) => (
-                <TextField {...params} label="Select a column" />
-              )}
-              sx={{ width: 300, marginTop: 5, marginBottom: 4 }}
-              onChange={handleColumnSelect}
-            />
-          )}
-
-          
-          
-         {selectedColumns && 
-            <div>
-                      {filterList.map((filter, index) => (
-                        <div key={index}>{filter}</div>
+  
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      aria-labelledby="modal-modal-title"
+      aria-describedby="modal-modal-description"
+    >
+      <Box sx={style}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Table</InputLabel>
+              <Select
+                value={selectedTable}
+                label="Table"
+                onChange={handleTableChange}
+              >
+                {Object.keys(jsonData).map((tableName, index) => (
+                  <MenuItem key={index} value={tableName}>
+                    {tableName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Columns</InputLabel>
+              <Select
+                multiple
+                value={selectedColumns}
+                label="Columns"
+                onChange={handleColumnChange}
+              >
+                {selectedTable &&
+                  jsonData[selectedTable].map((column, index) => (
+                    <MenuItem key={index} value={column[0]}>
+                      {column[0]}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            {selectedColumns.map((column, index) => (
+              <Grid container spacing={2} key={index}>
+                <Grid item xs={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Column</InputLabel>
+                    <Select
+                      value={column}
+                      label="Column"
+                      disabled
+                    >
+                      <MenuItem value={column}>{column}</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Operator</InputLabel>
+                    <Select
+                      value={selectedOperator}
+                      label="Operator"
+                      onChange={handleOperatorChange}
+                    >
+                      {operators.map((operator, index) => (
+                        <MenuItem key={index} value={operator}>
+                          {operator}
+                        </MenuItem>
                       ))}
-            <Button onClick={handleAddClick}>Add Filter</Button>
-            </div>
-            }
-            
-            
-            
-          <Button>Save</Button>
-        </Box>
-      </Modal>
-    </div>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={4}>
+                  <TextField
+                    fullWidth
+                    label="Filter"
+                    value={selectedFilters[index]}
+                    onChange={(event) => handleFilterChange(event, index)}
+                  />
+                </Grid>
+                <Grid item xs={2}>
+                  <IconButton onClick={() => removeFilter(index)}>
+                    <CloseIcon />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            ))}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Button variant="outlined" onClick={addFilter}>
+                  Add Filter
+                </Button>
+              </Grid>
+            </Grid>
+          </Grid>
+          <Grid item xs={12}>
+            <Button variant="contained" onClick={handleSubmit}>
+              Submit
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
+    </Modal>
+  </>
+  
   );
-}
+  }
